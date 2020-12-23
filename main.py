@@ -21,9 +21,9 @@ class Lagrangian():
         self.angular_velocity = []
         self.angular_acc = []
         for i, _ in enumerate(self.links):
-            self.angles.append(Function('theta'+ str(i))(self.t))
-            self.angular_velocity.append(Function('theta'+ str(i) + "'")(self.t))
-            self.angular_acc.append(Function('theta'+ str(i) + "''")(self.t))
+            self.angles.append(Function('theta'+ str(i + 1))(self.t))
+            self.angular_velocity.append(Function('theta'+ str(i + 1) + "'")(self.t))
+            self.angular_acc.append(Function('theta'+ str(i + 1) + "''")(self.t))
         
         self.x = []
         self.y = []      
@@ -92,9 +92,18 @@ print('KE: ',lag.kinetic_energy)
 print('PE: ',lag.potential_energy)
 lag.lagrang()
 print('L: ',lag.L)
-dL_dv = lag.derivate(lag.L, lag.angular_velocity[0])
-print('dL_dv: ',dL_dv)
-dL_dt = [simplify(lag.derivate(dL_dv, 't')[0])]
-print('dL_dt: ',dL_dt)
-dL_da = lag.derivate(lag.L, lag.angles[0])
-print('dL_da: ',dL_da)
+dL = []
+for i in range(2):
+    dL_dv = lag.derivate(lag.L, lag.angular_velocity[i])
+    #print('dL_dv: ',dL_dv)
+    dL_dt = [simplify(lag.derivate(dL_dv, 't')[0])]
+    #print('dL_dt: ',dL_dt)
+    dL_da = lag.derivate(lag.L, lag.angles[i])
+    #print('dL_da: ',dL_da)
+    dL.append(simplify(dL_dt[0] -dL_da[0]))
+    #print('dL: ', dL[i])
+solution , = linsolve([dL[0], dL[1]], lag.angular_acc[0], lag.angular_acc[1])
+print('\n')
+print('solution1: ', simplify(solution[0]))
+print('\n')
+print('solution2: ', simplify(solution[1]))
