@@ -90,7 +90,7 @@ class Lagrangian():
 links = []
 links.append(Link(250, 250, 325, 250))
 links.append(Link(325, 250, 400, 250, father = links[0]))
-links.append(Link(400, 250, 475, 250, father = links[1]))
+#links.append(Link(400, 250, 475, 250, father = links[1]))
 lag = Lagrangian(links)
 lag.position()
 print('x: ', lag.x)
@@ -109,7 +109,7 @@ print('PE: ',lag.potential_energy)
 lag.lagrang()
 print('L: ',lag.L)
 dL = []
-for i in range(3):
+for i in range(2):
     dL_dv = lag.derivate(lag.L, lag.angular_velocity[i])
     #print('dL_dv: ',dL_dv)
     dL_dt = [simplify(lag.derivate(dL_dv, 't')[0])]
@@ -118,53 +118,47 @@ for i in range(3):
     #print('dL_da: ',dL_da)
     dL.append(simplify(dL_dt[0] -dL_da[0]))
     print('dL: ', dL[i])
-solution , = linsolve([dL[0], dL[1], dL[2]], lag.angular_acc[0], lag.angular_acc[1], lag.angular_acc[2])
-print('\n')
-print('solution1: ', simplify(solution[0]))
-print('\n')
-print('solution2: ', simplify(solution[1]))
+#solution , = linsolve([dL[0], dL[1], dL[2]], lag.angular_acc[0], lag.angular_acc[1], lag.angular_acc[2])
+solution , = linsolve([dL[0], dL[1]], lag.angular_acc[0], lag.angular_acc[1])
+solution = simplify(solution)
 
 
 
-angle = [math.pi/2, math.pi/2, math.pi/2]
-ang_vel = [0, 0, 0]
-ang_acc = [0, 0, 0]
+
+
+angle = [math.pi/2, math.pi/2]
+ang_vel = [0, 0]
+ang_acc = [0, 0]
+ang_acc[0] = lambdify([lag.angular_velocity[0], lag.angular_velocity[1], lag.angles[0], lag.angles[1]], solution[0])
+ang_acc[1] = lambdify([lag.angular_velocity[0], lag.angular_velocity[1], lag.angles[0], lag.angles[1]], solution[1])
 
 root = Tk()
 canvas = Canvas(root,  width = 500, height = 500, bg = "gray")
 link_img = []
-link_img.append(canvas.create_line(links[0].x0, links[0].y0, links[0].x1,  links[0].y1, width = 5, fill = 'red'))
-link_img.append(canvas.create_line(links[1].x0, links[1].y0, links[1].x1,  links[1].y1, width = 5, fill = 'red'))
-link_img.append(canvas.create_line(links[2].x0, links[2].y0, links[2].x1,  links[2].y1, width = 5, fill = 'red'))
+for link in links:
+    link_img.append(canvas.create_line(link.x0, link.y0, link.x1,  link.y1, width = 4, fill = 'red'))
 
-
+acc = [0, 0]
 def step():
-    ang_acc = solution.subs(lag.angles[0], angle[0]).subs(lag.angles[1], angle[1]).subs(lag.angular_velocity[1], ang_vel[1]).subs(lag.angular_velocity[0], ang_vel[0]).subs(lag.angles[2], angle[2]).subs(lag.angular_velocity[2], ang_vel[2])
+    global  angle
     
-    ang_acc[0].evalf()
-    ang_vel[0] += ang_acc[0]*0.1
-    angle[0] += ang_vel[0]*0.1
+    acc[0] = ang_acc[0](ang_vel[0], ang_vel[1], angle[0], angle[1])
+    acc[1] = ang_acc[1](ang_vel[0], ang_vel[1], angle[0], angle[1])
+    for i in range(len(angle)):
+        ang_vel[i] += acc[i]*0.2
+        angle[i] += ang_vel[i]*0.2
 
-    ang_acc[1].evalf()
-    ang_vel[1] += ang_acc[1]*0.1
-    angle[1] += ang_vel[1]*0.1
 
-    ang_acc[2].evalf()
-    ang_vel[2] += ang_acc[2]*0.1
-    angle[2] += ang_vel[2]*0.1
+    print(angle[0], angle[1])
 
-    print(angle[0], angle[1], angle[2])
+    for i in range(len(angle)):
+        links[i].update(angle[i]) 
+        canvas.coords(link_img[i], links[i].x0, links[i].y0, links[i].x1,  links[i].y1)
 
-    links[0].update(angle[0])  
-    links[1].update(angle[1]) 
-    links[2].update(angle[2]) 
-    canvas.coords(link_img[0], links[0].x0, links[0].y0, links[0].x1,  links[0].y1)
-    canvas.coords(link_img[1], links[1].x0, links[1].y0, links[1].x1,  links[1].y1)
-    canvas.coords(link_img[2], links[2].x0, links[2].y0, links[2].x1,  links[2].y1)
-
-t = RepeatingTimer(0.01, step)
+t = RepeatingTimer(0.025, step)
 t.start()
 
 
 canvas.grid(column = 0, row = 0)
 root.mainloop();
+
