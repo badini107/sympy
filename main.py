@@ -1,13 +1,28 @@
 from sympy import *
+from tkinter import *
+from repeatingtimer import  RepeatingTimer
+import math
 
 class Link():
-    def __init__(self, x0, y0, x1, y1):
+    def __init__(self, x0, y0, x1, y1, **kwargs):
         self.x0 = x0
         self.y0 = y0
         self.x1 = x1
         self.y1 = y1
         self.length =  sqrt((x1 - x0)**2 + (y1 - y0)**2)
         self.mass = 1
+        if 'father' in kwargs:
+            self.father = kwargs['father']
+        else:
+            self.father = None
+
+    def update(self, angle):
+        if self.father:
+            self.x0 = self.father.x1
+            self.y0 = self.father.y1
+
+        self.x1 = math.sin(angle) * self.length + self.x0
+        self.y1 = math.cos(angle) * self.length + self.y0
         
 
 class Lagrangian():
@@ -73,8 +88,9 @@ class Lagrangian():
         self.L = [self.kinetic_energy[0] - self.potential_energy[0]]
 
 links = []
-links.append(Link(0, 0, 1, 0))
-links.append(Link(1, 0, 2, 0))
+links.append(Link(250, 250, 325, 250))
+links.append(Link(325, 250, 400, 250, father = links[0]))
+links.append(Link(400, 250, 475, 250, father = links[1]))
 lag = Lagrangian(links)
 lag.position()
 print('x: ', lag.x)
@@ -93,7 +109,7 @@ print('PE: ',lag.potential_energy)
 lag.lagrang()
 print('L: ',lag.L)
 dL = []
-for i in range(2):
+for i in range(3):
     dL_dv = lag.derivate(lag.L, lag.angular_velocity[i])
     #print('dL_dv: ',dL_dv)
     dL_dt = [simplify(lag.derivate(dL_dv, 't')[0])]
@@ -101,9 +117,54 @@ for i in range(2):
     dL_da = lag.derivate(lag.L, lag.angles[i])
     #print('dL_da: ',dL_da)
     dL.append(simplify(dL_dt[0] -dL_da[0]))
-    #print('dL: ', dL[i])
-solution , = linsolve([dL[0], dL[1]], lag.angular_acc[0], lag.angular_acc[1])
+    print('dL: ', dL[i])
+solution , = linsolve([dL[0], dL[1], dL[2]], lag.angular_acc[0], lag.angular_acc[1], lag.angular_acc[2])
 print('\n')
 print('solution1: ', simplify(solution[0]))
 print('\n')
 print('solution2: ', simplify(solution[1]))
+
+
+
+angle = [math.pi/2, math.pi/2, math.pi/2]
+ang_vel = [0, 0, 0]
+ang_acc = [0, 0, 0]
+
+root = Tk()
+canvas = Canvas(root,  width = 500, height = 500, bg = "gray")
+link_img = []
+link_img.append(canvas.create_line(links[0].x0, links[0].y0, links[0].x1,  links[0].y1, width = 5, fill = 'red'))
+link_img.append(canvas.create_line(links[1].x0, links[1].y0, links[1].x1,  links[1].y1, width = 5, fill = 'red'))
+link_img.append(canvas.create_line(links[2].x0, links[2].y0, links[2].x1,  links[2].y1, width = 5, fill = 'red'))
+
+
+def step():
+    ang_acc = solution.subs(lag.angles[0], angle[0]).subs(lag.angles[1], angle[1]).subs(lag.angular_velocity[1], ang_vel[1]).subs(lag.angular_velocity[0], ang_vel[0]).subs(lag.angles[2], angle[2]).subs(lag.angular_velocity[2], ang_vel[2])
+    
+    ang_acc[0].evalf()
+    ang_vel[0] += ang_acc[0]*0.1
+    angle[0] += ang_vel[0]*0.1
+
+    ang_acc[1].evalf()
+    ang_vel[1] += ang_acc[1]*0.1
+    angle[1] += ang_vel[1]*0.1
+
+    ang_acc[2].evalf()
+    ang_vel[2] += ang_acc[2]*0.1
+    angle[2] += ang_vel[2]*0.1
+
+    print(angle[0], angle[1], angle[2])
+
+    links[0].update(angle[0])  
+    links[1].update(angle[1]) 
+    links[2].update(angle[2]) 
+    canvas.coords(link_img[0], links[0].x0, links[0].y0, links[0].x1,  links[0].y1)
+    canvas.coords(link_img[1], links[1].x0, links[1].y0, links[1].x1,  links[1].y1)
+    canvas.coords(link_img[2], links[2].x0, links[2].y0, links[2].x1,  links[2].y1)
+
+t = RepeatingTimer(0.01, step)
+t.start()
+
+
+canvas.grid(column = 0, row = 0)
+root.mainloop();
